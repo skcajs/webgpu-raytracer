@@ -68,14 +68,11 @@ h1 {
   color: #888;
 }
 
-canvas {
-  /* display: block;
-  width: 100%;
-  height: 100%; */
+/* canvas {
   display: block;
-  width: 1024px;
-  height: 768px;
-}
+  width: 100%;
+  height: 100%;
+} */
 
 button {
   border-radius: 8px;
