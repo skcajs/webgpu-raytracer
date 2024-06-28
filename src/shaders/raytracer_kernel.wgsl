@@ -1,8 +1,11 @@
-@group(0) @binding(0) var color_buffer: texture_storage_2d<rgba8unorm, write>;
-
 struct Sphere {
     center: vec3<f32>,
+    color: vec3<f32>,
     radius: f32
+}
+
+struct ObjectData {
+    spheres: array<Sphere>,
 }
 
 struct Ray {
@@ -10,6 +13,23 @@ struct Ray {
     origin: vec3<f32>
 }
 
+struct SceneData {
+    camPos: vec3<f32>,
+    camForward: vec3<f32>,
+    camRight: vec3<f32>,
+    camUp: vec3<f32>,
+    sphereCount: f32
+}
+
+struct RenderState {
+    t: f32,
+    color: vec3<f32>,
+    hit: bool
+}
+
+@group(0) @binding(0) var color_buffer: texture_storage_2d<rgba8unorm, write>;
+@group(0) @binding(1) var<uniform> scene: SceneData;
+@group(0) @binding(2) var<storage, read> objects: ObjectData;
 @compute @workgroup_size(1,1,1)
 fn main(@builtin(global_invocation_id) GlobalInvocationID: vec3<u32>) {
 
@@ -19,33 +39,64 @@ fn main(@builtin(global_invocation_id) GlobalInvocationID: vec3<u32>) {
     let horizontal_coefficient: f32 = (f32(screen_pos.x) - f32(screen_size.x) / 2) / f32(screen_size.x);
     let vertical_coefficient: f32 = (f32(screen_pos.y) - f32(screen_size.y) / 2) / f32(screen_size.x);
 
-    let forward: vec3<f32> = vec3<f32>(1.0, 0.0, 0.0);
-    let right: vec3<f32> = vec3<f32>(0.0, -1.0, 0.0);
-    let up: vec3<f32> = vec3<f32>(0.0, 0.0, 1.0);
-
-    var mySphere: Sphere;
-    mySphere.center = vec3<f32>(3.0, 0.0, 0.0);
-    mySphere.radius = 1.0;
+    let forward: vec3<f32> = scene.camForward;
+    let right: vec3<f32> = scene.camRight;
+    let up: vec3<f32> = scene.camUp;
 
     var myRay: Ray;
     myRay.direction = normalize(forward + horizontal_coefficient * right + vertical_coefficient * up);
-    myRay.origin = vec3<f32>(0.0, 0.0, 0.0);
+    myRay.origin = scene.camPos;
 
-    var pixel_color: vec3<f32> = vec3<f32>(0.5, 0.0, 0.25);
-
-    if (hit(myRay, mySphere)) {
-        pixel_color = vec3<f32>(0.5, 1.0, 0.75);
-    }
+    let pixel_color: vec3<f32> = rayColor(myRay);
 
     textureStore(color_buffer, screen_pos, vec4<f32>(pixel_color, 1.0));
 }
 
-fn hit(ray: Ray, sphere: Sphere) -> bool {
+fn rayColor(ray: Ray) -> vec3<f32> {
+    var color: vec3<f32> = vec3(0.0, 0.0, 0.0);
 
+    var nearestHit: f32 = 9999;
+    var hitSomething: bool = false;
+
+    var renderState: RenderState;
+
+    for (var i: u32 = 0; i < u32(scene.sphereCount); i++) {
+        var newRenderState: RenderState = hit(ray, objects.spheres[i], 0.001, nearestHit, renderState);
+
+        if (newRenderState.hit) {
+            nearestHit = newRenderState.t;
+            renderState = newRenderState;
+            hitSomething = true;
+        }
+    }
+
+    if (hitSomething) {
+        color = renderState.color;
+    }
+    return color;
+}
+
+fn hit(ray: Ray, sphere: Sphere, tMin: f32, tMax: f32, oldRenderState: RenderState) -> RenderState {
+
+    let co: vec3<f32> = ray.origin - sphere.center;
     let a: f32 = dot(ray.direction, ray.direction);
     let b: f32 = 2.0 * dot(ray.direction, ray.origin - sphere.center);
-    let c: f32 = dot(ray.origin - sphere.center, ray.origin - sphere.center) - sphere.radius * sphere.radius;
+    let c: f32 = dot(co, co) - sphere.radius * sphere.radius;
     let descriminant: f32 = b*b - 4 * a * c;
 
-    return descriminant > 0;
+    var renderState: RenderState;
+    renderState.color = oldRenderState.color;
+
+    if (descriminant > 0.0) {
+        let t: f32 = (-b - sqrt(descriminant)) / (2 * a);
+
+        if (t > tMin && t < tMax) {
+            renderState.t = t;
+            renderState.color = sphere.color;
+            renderState.hit = true;
+            return renderState;
+        }
+    }
+    renderState.hit = false;
+    return renderState;
 }
