@@ -75,7 +75,7 @@ export class Scene {
             vec3.min(node.minCorner, node.minCorner, temp);
 
             vec3.add(temp, sphere.center, axis);
-            vec3.min(node.maxCorner, node.maxCorner, temp);
+            vec3.max(node.maxCorner, node.maxCorner, temp);
         }
     }
 
@@ -102,7 +102,7 @@ export class Scene {
         var i: number = node.leftChild;
         var j: number = i + node.sphereCount - 1;
 
-        while (i < j) {
+        while (i <= j) {
             if (this.spheres[this.sphereIndices[i]].center[axis] < splitPosition) {
                 i += 1;
             } else {
