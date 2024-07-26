@@ -4,7 +4,12 @@ import { Scene } from './scene';
 
 const canvas: HTMLCanvasElement = <HTMLCanvasElement>document.getElementById('canvas');
 
-const scene: Scene = new Scene();
+const sphereCount: number = 64;
+
+const sphereCountLabel: HTMLElement = <HTMLElement>document.getElementById('sphere-count');
+sphereCountLabel.innerText = sphereCount.toString();
+
+const scene: Scene = new Scene(sphereCount);
 
 const renderer = new Renderer(canvas, scene);
 
