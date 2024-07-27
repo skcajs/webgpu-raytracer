@@ -320,6 +320,8 @@ export class Renderer {
             sphereCount: this.scene.spheres.length
         };
 
+        const maxBounces: number = 4;
+
         this.device.queue.writeBuffer(
             this.sceneParams, 0,
             new Float32Array(
@@ -335,7 +337,7 @@ export class Renderer {
                     sceneData.camRight[0],
                     sceneData.camRight[1],
                     sceneData.camRight[2],
-                    0.0,
+                    maxBounces,
                     sceneData.camUp[0],
                     sceneData.camUp[1],
                     sceneData.camUp[2],
